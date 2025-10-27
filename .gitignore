@@ -53,5 +53,3 @@ phpunit-result-*
 
 # Other
 .vagrant/
-
-Dockerfile
