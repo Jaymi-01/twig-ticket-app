@@ -1,25 +1,55 @@
-# Use official PHP image with Apache
+# Use official PHP with Apache
 FROM php:8.2-apache
-# Install system dependencies for Composer
-RUN apt-get update && apt-get install -y unzip git curl && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-# Enable Apache modules
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    zip \
+    unzip \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
-# Copy app
-COPY . /var/www/html/
+
 # Set working directory
-WORKDIR /var/www/html/
+WORKDIR /var/www/html
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
 # Install PHP dependencies
-RUN composer install
-# Configure Apache
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's|<Directory /var/www/>|<Directory /var/www/html/public>|g' /etc/apache2/apache2.conf
-# Allow .htaccess to work
-RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
-# Use Render port
-ENV PORT 10000
-RUN sed -i 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
-# Expose port
-EXPOSE 10000
+RUN composer install --no-dev --optimize-autoloader
+
+# Copy package.json files
+COPY package.json package-lock.json ./
+
+# Install Node dependencies
+RUN npm ci --only=production
+
+# Copy the rest of the application
+COPY . .
+
+# Build Tailwind CSS with PostCSS
+RUN npm run build:css
+
+# Create necessary directories and set permissions
+RUN mkdir -p cache/twig \
+    && chown -R www-data:www-data cache \
+    && chmod -R 775 cache
+
+# Configure Apache DocumentRoot
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/src
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Expose port 80
+EXPOSE 80
+
 # Start Apache
 CMD ["apache2-foreground"]
