@@ -55,3 +55,4 @@ phpunit-result-*
 .vagrant/
 
 Dockerfile
+dockerfile
