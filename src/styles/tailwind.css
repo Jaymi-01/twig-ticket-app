@@ -1,0 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&family=Lavishly+Yours&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-accent: #06B6D4;
+  --color-background: #F8FAFC;
+  --font-header: "Alumni Sans Pinstripe", sans-serif;
+  --font-body: "Lavishly Yours", cursive;
+}
